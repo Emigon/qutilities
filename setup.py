@@ -11,6 +11,7 @@ setup(name='qutilities',
           'numpy>=1.16.3',
           'sympy>=1.5.1',
           'pandas>=0.24.0'
-          'fitkit>=0.1.0',
+          'fitkit>=0.1.1',
+          'pint>=0.9',
           'matplotlib',
         ])

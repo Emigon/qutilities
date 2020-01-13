@@ -9,8 +9,10 @@ import numpy as np
 import sympy as sp
 
 from fitkit import *
+from qutilities import ureg
 
-def global_gain_and_phase(b_G = (-20, 0, 20), b_theta = (-180, 0, 180)):
+def global_gain_and_phase(b_G = (-20, 0, 20),
+                          b_theta = (-180*ureg('degree'), 0*ureg('degree'), 180*ureg('degree'))):
     """ returns a Parametric1D model of a global gain and phase component
 
     Parameters:
@@ -20,7 +22,7 @@ def global_gain_and_phase(b_G = (-20, 0, 20), b_theta = (-180, 0, 180)):
     Args:   The parameter bounds as required by Parametric1D
     """
     G, theta = sp.symbols('G theta')
-    cartesian = 10**(G/10) * sp.exp(1j * np.pi/180 * theta)
+    cartesian = 10**(G/10) * sp.exp(1j * theta)
     return Parametric1D(cartesian, {'G': b_G, 'theta': b_theta})
 
 def z_at_f_infty(s21, circle):
@@ -43,5 +45,4 @@ def fwhm(s21):
     mag = s21.abs()
     half_max = mag.min() + .5*np.ptp(mag.values)
     fwhm = np.ptp(mag.samples_below(half_max).x)
-    return fwhm.to_base_units().magnitude if hasattr(fwhm, 'units') else fwhm
-
+    return fwhm

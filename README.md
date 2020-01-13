@@ -18,9 +18,10 @@ order to fit them with `qutilities`:
 import pandas as pd
 
 from fitkit import Signal1D
+from qutilities import *
 
 df = pd.read_pickle('examples/sample_data.pkl') # complex s21 dataset
-data = [Signal1D(df[col], xraw = df.index) for col in df]
+data = [Signal1D(df[col], xraw = df.index.values*ureg('Hz')) for col in df]
 
 for s21 in data:
     s21.plot(style = 'dB')
@@ -34,8 +35,6 @@ the line delay should be consistent between different measurements taken during 
 same experiment.
 
 ```python
-from qutilities import *
-
 processed, line_delay_model = rm_line_delay(data[0])
 
 data[0].plot(style = 'deg')

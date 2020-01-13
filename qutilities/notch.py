@@ -18,8 +18,8 @@ from fitkit.decimate import *
 
 def ideal_notch(b_Qi = (3, 4.5, 6),
                 b_Qc = (3, 4.5, 6),
-                b_phi = (-45, 0, 45),
-                b_fr = (1e9, 5e9, 11e9)):
+                b_phi = (-60*ureg('degree'), 0*ureg('degree'), 60*ureg('degree')),
+                b_fr = (1*ureg('GHz'), 5*ureg('GHz'), 11*ureg('GHz'))):
     """ returns a Parametric1D model for an ideal notch resonator
 
     Params:
@@ -31,8 +31,8 @@ def ideal_notch(b_Qi = (3, 4.5, 6),
     Args:   Parameter bounds as required by Parametric1D
     """
     Ql, Qi, Qc, phi, fr, f = sp.symbols('Ql Qi Qc phi fr f')
-    s21 = 1 - Ql/(10**Qc) * sp.exp(-1j * (np.pi/180) * phi)/(1 + 2j*Ql*(f/fr - 1))
-    expr = s21.subs(Ql, 1/(1/(10**Qi) + 1/((10**Qc)*sp.cos((np.pi/180) * phi))))
+    s21 = 1 - Ql/(10**Qc) * sp.exp(-1j*phi)/(1 + 2j*Ql*(f/fr - 1))
+    expr = s21.subs(Ql, 1/(1/(10**Qi) + 1/((10**Qc)*sp.cos(phi))))
 
     params = {'Qi': b_Qi, 'Qc': b_Qc, 'phi': b_phi, 'fr': b_fr}
 
@@ -54,7 +54,7 @@ def rm_global_gain_and_phase(s21):
     z = z_at_f_infty(s21, circle_fit(s21)[0]) # from .features
 
     pm_env.v['G'] = 10*np.log10(np.abs(z))
-    pm_env.v['theta'] = np.rad2deg(np.angle(z))
+    pm_env.v['theta'] = np.angle(z)*ureg('radian')
 
     return s21 / z, pm_env
 
@@ -74,36 +74,36 @@ def fit_notch(s21, N = 500):
         notch:  The Parametric1D model of the fitted resonance
         stds:   The standard deviations of the fitted quality factors Qc and Qi
     """
-    f = s21.x.magnitude if hasattr(s21.x, 'units') else s21.x
-    notch = ideal_notch(b_fr = (np.min(f), np.mean(f), np.max(f)))
+    notch = ideal_notch(b_fr = (np.min(s21.x), np.mean(s21.x), np.max(s21.x)))
     circle, eps = circle_fit(s21)
 
     # estimate the tilt angle based on the circle centre
-    phi = -np.angle(1 - circle.z)
-    notch.v['phi'] = round_into_range(np.rad2deg(phi),
-                                      notch.v._l['phi'],
-                                      notch.v._u['phi'])
+    notch.v['phi'] = -np.angle(1 - circle.z)*ureg('radian')
 
     # estimate the resonance frequency to be diametrically opposite 1 + 0j
     sfr = -(1 + 0j - circle.z) + circle.z
-    fr = (s21 - sfr).abs().idxmin()
-    notch.v['fr'] = fr.to_base_units().magnitude if hasattr(fr, 'units') else fr
+    notch.v['fr'] = (s21 - sfr).abs().idxmin()
 
     # construct a simplified model using measured parameters above
-    Ql, f = sp.symbols('Ql f')
-    expr = 1 - 2*circle.r*np.exp(-1j*phi) / (1 + 2j*Ql*(f/notch.v['fr'] - 1))
+    Ql, fr, f = sp.symbols('Ql fr f')
+    expr = 1 - 2*circle.r*np.exp(-1j*notch.v['phi'].magnitude) \
+               / (1 + 2j*Ql*(f*ureg('Hz')/notch.v['fr'] - 1))
 
     Qrough = notch.v['fr']/fwhm(s21) # the fwhm estimates a good starting point
     simple_pm = Parametric1D(expr, {'Ql': (.8*Qrough, Qrough, 1.2*Qrough)})
 
+    # convert to dimensionless as units have been cancelled in above expr. sympy
+    # and pint don't play nice!
+    in_hz = Signal1D(s21.values, xraw = s21.x.to('Hz').magnitude)
+
     # decimate the data to reduce the influence of off resonance points on the fit
-    simple_pm.fit(decimate_by_derivative(s21, N))
+    simple_pm.fit(decimate_by_derivative(in_hz, N))
 
     # calculate individual quality factors from the fitted loaded quality factor
     Qc = simple_pm.v['Ql']/(2*circle.r)
     notch.v['Qc'] = round_into_range(np.log10(Qc), notch.v._l['Qc'], notch.v._u['Qc'])
 
-    Qi = 1/(1/simple_pm.v['Ql'] - 1/(Qc*np.cos(phi)))
+    Qi = 1/(1/simple_pm.v['Ql'] - 1/(Qc*np.cos(notch.v['phi'])))
     notch.v['Qi'] = round_into_range(np.log10(Qi), notch.v._l['Qi'], notch.v._u['Qi'])
 
     # estimate the standard deviations associated with the estimated Q factors

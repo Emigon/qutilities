@@ -9,7 +9,7 @@ from qutilities.circle import *
 @pytest.fixture
 def notch_resonator():
     nch = ideal_notch()
-    s21 = nch(np.linspace(4.5e9, 5.5e9, 10000))
+    s21 = nch(np.linspace(4.5*ureg('GHz'), 5.5*ureg('GHz'), 10000))
     return s21
 
 @pytest.mark.plot

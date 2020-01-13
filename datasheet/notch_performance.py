@@ -12,7 +12,9 @@ def perc_metric(sig1d, mdata):
     fit, fit_mdata = fit_notch(sig1d)
 
     for p in fit.v:
-        fit_mdata[f"perc_{p}"] = 100*np.abs(fit.v[p] - mdata[p])/mdata[p]
+        fit_mdata[f"perc_{p}"] = 100*np.abs((fit.v[p] - mdata[p])/mdata[p])
+        if hasattr(fit.v[p], 'units'):
+            fit_mdata[f"perc_{p}"] = fit_mdata[f"perc_{p}"].to_reduced_units().magnitude
     fit_mdata['parameters'] = mdata
     fit_mdata['test_case'] = sig1d
 

@@ -10,8 +10,9 @@ from fitkit import *
 from fitkit.decimate import *
 
 from .circle import *
+from qutilities import *
 
-def pm_line_delay(b_tau = (0, 0, 25/3e8)):
+def pm_line_delay(b_tau = (0*ureg('s'), 0*ureg('s'), 25/3e8 * ureg('s'))):
     """ returns a Parametric1D model for the line delay
 
     Params:
@@ -40,20 +41,20 @@ def rm_line_delay(s21, k = 10, N = 201):
     """
 
     # unwrap the phase and fit linear model to obtain a starting point for tau
-    f = np.array(s21.x.magnitude if hasattr(s21.x, 'units') else s21.x)
     phi = np.unwrap(np.angle(s21.values))
 
-    p = np.poly1d(np.polyfit(f[:k], phi[:k], 1))
-    tau_0 = p.c[0]/(2*np.pi) # we expect this to be negative
+    p = np.poly1d(np.polyfit(s21.x[:k].to('Hz').magnitude, phi[:k], 1))
+    tau_0 = p.c[0]*ureg('s')/(2*np.pi) # we expect this to be negative
+    # ^ make pint and numpy play nice
 
-    rough = s21*Signal1D(np.exp(-2j*np.pi*tau_0*f), xraw = s21.x)
+    rough = s21*Signal1D(np.exp(-2j*np.pi*tau_0*s21.x), xraw = s21.x)
 
     # construct the model and a circle fitting based error function
-    pm_neg = pm_line_delay(b_tau = (-np.abs(tau_0), 0, np.abs(tau_0)))
+    pm_neg = pm_line_delay(b_tau = (-np.abs(tau_0), 0*ureg('s'), np.abs(tau_0)))
 
     def errf(v, self, sig1d, _):
         try:
-            pm_neg.v['tau'] = v[0]
+            pm_neg.v['tau'] = v[0]*pm_neg.v['tau'].to_base_units().units
         except:
             pass # return the same result as the previously set parameter!
         return circle_fit(sig1d*pm_neg(sig1d.x))[-1]
@@ -66,4 +67,4 @@ def rm_line_delay(s21, k = 10, N = 201):
     tau_f = -(pm_neg.v['tau'] + tau_0)
     bounds = (tau_f - .5*np.abs(tau_f), tau_f, tau_f + .5*np.abs(tau_f))
     ld_model = pm_line_delay(b_tau = bounds)
-    return s21*Signal1D(np.exp(2j*np.pi*tau_f*f), xraw = s21.x), ld_model
+    return s21*Signal1D(np.exp(2j*np.pi*tau_f*s21.x), xraw = s21.x), ld_model

@@ -5,6 +5,9 @@ author: daniel parker
 
 import numpy as np
 from copy import deepcopy
+from tqdm import tqdm
+
+from fitkit.datasheet import *
 
 def notch_sampler(pm1d, N, **callkwargs):
     """ sample notch model for N uniformly sampled points in the parameter space
@@ -22,12 +25,12 @@ def notch_sampler(pm1d, N, **callkwargs):
         mdata:      A copy of the parameters that were sampled
     """
     v_init = deepcopy(pm1d.v)
-    for _ in range(N):
+    for _ in tqdm(range(N)):
         for p in pm1d.v:
-            pm1d.v[p] = np.random.uniform(pm1d.v._l[p], pm1d.v._u[p])
+            pm1d.v[p] = pint_safe_uniform(pm1d.v._l[p], pm1d.v._u[p])
 
         fr = pm1d.v['fr']
-        phi = np.deg2rad(np.cos(pm1d.v['phi']))
+        phi = np.cos(pm1d.v['phi'])
         Ql = 1/(1/(10**pm1d.v['Qi']) + 1/((10**pm1d.v['Qc'])*np.cos(phi)))
         span = 20 * (fr/Ql) # the estimated fwhm
 
