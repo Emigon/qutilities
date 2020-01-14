@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from fitkit.datasheet import *
 
-def notch_sampler(pm1d, N, **callkwargs):
+def notch_sampler(pm1d, N, x, **callkwargs):
     """ sample notch model for N uniformly sampled points in the parameter space
 
     Args:
@@ -17,6 +17,8 @@ def notch_sampler(pm1d, N, **callkwargs):
                     environment terms). This function assumes that pm1d has
                     parameters 'fr', 'Qi', 'Qc' and 'phi'
         N:          The number of samples to draw
+        x:          Dummy argument to maintain the same function signature as
+                    fitkit.datasheet.sample. Set to None. This is ignored.
         callkwargs: Keyword arguments to pass to Parametric1D.__call__
 
     Yields:
