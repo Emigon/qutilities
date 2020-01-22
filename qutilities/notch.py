@@ -104,7 +104,9 @@ def fit_notch(s21, N = 500):
     notch.v['Qc'] = round_into_range(np.log10(Qc), notch.v._l['Qc'], notch.v._u['Qc'])
 
     Qi = 1/(1/simple_pm.v['Ql'] - 1/(Qc*np.cos(notch.v['phi'])))
-    notch.v['Qi'] = round_into_range(np.log10(Qi), notch.v._l['Qi'], notch.v._u['Qi'])
+    if Qi < 0:
+        warnings.warn('Attempted to set negative Qi')
+    notch.v['Qi'] = round_into_range(np.log10(np.abs(Qi)), notch.v._l['Qi'], notch.v._u['Qi'])
 
     # estimate the standard deviations associated with the estimated Q factors
     stds = {}
