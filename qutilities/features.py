@@ -25,7 +25,7 @@ def global_gain_and_phase(b_G = (-40, 0, 40),
     cartesian = 10**(G/10) * sp.exp(1j * theta)
     return Parametric1D(cartesian, {'G': b_G, 'theta': b_theta})
 
-def z_at_f_infty(s21, circle):
+def z_at_f_infty(s21, circle, clockwise = False):
     """ locates the point z on the given circle corresponding to s21(f = infinity)
 
     Args:
@@ -36,7 +36,11 @@ def z_at_f_infty(s21, circle):
     theta = ((np.angle(s21.values[-1] - circle.z) - \
               np.angle(s21.values[ 0] - circle.z))/2 % np.pi)
 
-    z = circle.z + (s21.values[0] - circle.z)*np.exp(1j*theta)
+    if clockwise:
+        z = circle.z + (s21.values[-1] - circle.z)*np.exp(-1j*(theta + np.pi))
+    else:
+        z = circle.z + (s21.values[0] - circle.z)*np.exp(1j*theta)
+
     # adjust the point so that it sits on the fitted circle
     return circle.z + circle.r*(z - circle.z)/np.abs(z - circle.z)
 
