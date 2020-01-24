@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from qutilities import *
+from qutitlites.notch import *
 from fitkit.datasheet import *
 from sampler import *
 

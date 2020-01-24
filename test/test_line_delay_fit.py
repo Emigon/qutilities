@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from fitkit import Signal1D
 from fitkit.datasheet import *
 
-from qutilities import *
+from qutilities.notch import *
 
 @pytest.fixture
 def resonators_w_line_delays():
