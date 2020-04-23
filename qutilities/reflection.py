@@ -57,10 +57,6 @@ def rm_global_gain_and_phase(s11):
 
     return s11 / z, pm_env
 
-def round_into_range(val, lo, hi):
-    """ round val into the range (lo, hi) """
-    return np.min([np.max([val, lo]), hi])
-
 def fit_reflection(s11):
     """ fit the resonance parameters for a notch resonator to the resonance s11
 
@@ -79,8 +75,8 @@ def fit_reflection(s11):
     Qc = Ql*(1 - circle.r)
     if Qc < 0:
         warnings.warn('attempted to set negative Qc')
-    pm.v['Qi'] = round_into_range(np.log10(circle.r*Ql), pm.v._l['Qi'], pm.v._u['Qi'])
-    pm.v['Qc'] = round_into_range(np.log10(np.abs(Qc)), pm.v._l['Qc'], pm.v._u['Qc'])
+    pm.v.set('Qi', np.log10(circle.r*Ql), clip=True)
+    pm.v.set('Qc', np.log10(np.abs(Qc)), clip=True)
 
     # Nelder-Mead polish the parameters
     pm.fit(s11)

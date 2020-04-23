@@ -58,10 +58,6 @@ def rm_global_gain_and_phase(s21):
 
     return s21 / z, pm_env
 
-def round_into_range(val, lo, hi):
-    """ round val into the range (lo, hi) """
-    return np.min([np.max([val, lo]), hi])
-
 def fit_notch(s21, N = 500):
     """ fit the resonance parameters for a notch resonator to the resonance s21
 
@@ -101,12 +97,12 @@ def fit_notch(s21, N = 500):
 
     # calculate individual quality factors from the fitted loaded quality factor
     Qc = simple_pm.v['Ql']/(2*circle.r)
-    notch.v['Qc'] = round_into_range(np.log10(Qc), notch.v._l['Qc'], notch.v._u['Qc'])
+    notch.v.set('Qc', np.log10(Qc), clip=True)
 
     Qi = 1/(1/simple_pm.v['Ql'] - 1/(Qc*np.cos(notch.v['phi'])))
     if Qi < 0:
         warnings.warn('Attempted to set negative Qi')
-    notch.v['Qi'] = round_into_range(np.log10(np.abs(Qi)), notch.v._l['Qi'], notch.v._u['Qi'])
+    notch.v.set('Qi', np.log10(np.abs(Qi)), clip=True)
 
     # estimate the standard deviations associated with the estimated Q factors
     stds = {}
