@@ -12,7 +12,7 @@ from fitkit.decimate import *
 from .circle import *
 from qutilities import *
 
-def pm_line_delay(b_tau = (0*ureg('s'), 0*ureg('s'), 25/3e8 * ureg('s'))):
+def pm_line_delay(b_tau = (0, 0, 25/3e8)):
     """ returns a Parametric1D model for the line delay
 
     Params:
@@ -44,13 +44,12 @@ def rm_line_delay(s21, k = 10, N = 201):
     phi = np.unwrap(np.angle(s21.values))
 
     p = np.poly1d(np.polyfit(s21.x[:k].to('Hz').magnitude, phi[:k], 1))
-    tau_0 = p.c[0]*ureg('s')/(2*np.pi) # we expect this to be negative
-    # ^ make pint and numpy play nice
+    tau_0 = p.c[0]/(2*np.pi) # we expect this to be negative
 
     rough = s21*Signal1D(np.exp(-2j*np.pi*tau_0*s21.x), xraw = s21.x)
 
     # construct the model and a circle fitting based error function
-    pm_neg = pm_line_delay(b_tau = (-np.abs(tau_0), 0*ureg('s'), np.abs(tau_0)))
+    pm_neg = pm_line_delay(b_tau = (-np.abs(tau_0), 0, np.abs(tau_0)))
 
     def errf(v, self, sig1d, _):
         try:

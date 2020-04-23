@@ -9,10 +9,9 @@ import numpy as np
 import sympy as sp
 
 from fitkit import *
-from qutilities import ureg
 
 def global_gain_and_phase(b_G = (-40, 0, 40),
-                          b_theta = (-180*ureg('degree'), 0*ureg('degree'), 180*ureg('degree'))):
+                          b_theta = (-np.pi, 0, np.pi)):
     """ returns a Parametric1D model of a global gain and phase component
 
     Parameters:
