@@ -18,22 +18,24 @@ from fitkit.decimate import *
 
 def ideal_reflection(b_Qi = (3, 4.5, 6),
                      b_Qc = (3, 4.5, 6),
+                     b_theta = (-np.pi, 0, np.pi),
                      b_fr = (1e9, 5e9, 11e9)):
     """ returns a Parametric1D model for an ideal notch resonator
 
     Params:
         Qi:     The log10 of the internal quality factor
         Qc:     The log10 of the modulus of the complex coupling quality factor
+        theta:  The argument of the complex coupling quality factor
         fr:     The resonance frequency
 
     Args:   Parameter bounds as required by Parametric1D
     """
-    Qi, Qc, Kc, Ki, fr, f = sp.symbols('Qi Qc Kc Ki fr f')
+    Qi, Qc, theta, Kc, Ki, fr, f = sp.symbols('Qi Qc theta Kc Ki fr f')
 
     s11 = ((Kc - Ki) + 2j*(f - fr))/((Kc + Ki) - 2j*(f - fr))
-    expr = s11.subs(Kc, fr/(10**Qc)).subs(Ki, fr/(10**Qi))
+    expr = s11.subs(Kc, fr/((10**Qc)*sp.exp(1j*theta))).subs(Ki, fr/(10**Qi))
 
-    params = {'Qi': b_Qi, 'Qc': b_Qc, 'fr': b_fr}
+    params = {'Qi': b_Qi, 'Qc': b_Qc, 'theta': b_theta, 'fr': b_fr}
 
     return Parametric1D(expr, params)
 
@@ -72,6 +74,8 @@ def fit_reflection(s11):
     circle, _ = circle_fit(s11)
 
     pm.v['fr'] = (s11).abs().idxmin()
+    # estimate the tilt angle based on the circle centre
+    pm.v['theta'] = -np.angle(1 - circle.z)
 
     Ql = pm.v['fr']/fwhm(s11) # the fwhm estimates a good starting point
     Qc = Ql*(1 - circle.r)
