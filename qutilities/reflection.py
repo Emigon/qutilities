@@ -8,13 +8,13 @@ models and tools for fitting the resonance parameters of a reflection-type reson
 import warnings
 
 import numpy as np
+import pandas as pd
 import sympy as sp
 
 from .circle import *
 from  qutilities import *
 
-from fitkit import *
-from fitkit.decimate import *
+from fitkit import Parametric1D
 
 def ideal_reflection(b_Qi = (3, 4.5, 6),
                      b_Qc = (3, 4.5, 6),
@@ -37,29 +37,7 @@ def ideal_reflection(b_Qi = (3, 4.5, 6),
 
     params = {'Qi': b_Qi, 'Qc': b_Qc, 'theta': b_theta, 'fr': b_fr}
 
-    return Parametric1D(expr, params)
-
-def rm_global_gain_and_phase(s11, flip_phase=True):
-    """ scale and rotate s11 such that s21(f = infty) sits a 1 + 0j
-
-    Args:
-        s11:    Signal1D representation of the resonance data. Assumed to already
-                be circular
-
-    Returns:
-        s11:    The repositioned input
-        pm_env: The Parametric1D model for the global gain and phase components
-    """
-    pm_env = global_gain_and_phase()
-
-    z = np.exp(-1j*np.pi)*z_at_f_infty(s11, circle_fit(s11)[0], clockwise=True)
-
-    result = np.exp(1j*(np.pi - np.angle(z)))/np.abs(z)*s11
-
-    if flip_phase:
-        result = Signal1D(result.real().values - 1j*result.imag().values, xraw=result.x)
-
-    return result
+    return Parametric1D(expr, params, call_type=pd.Series)
 
 def fit_reflection(s11):
     """ fit the resonance parameters for a notch resonator to the resonance s11
@@ -70,21 +48,29 @@ def fit_reflection(s11):
     Returns:
         model:  The Parametric1D model of the fitted resonance
     """
-    pm = ideal_reflection(b_fr=(np.min(s11.x), np.mean(s11.x), np.max(s11.x)))
+    pm = ideal_reflection(b_fr=(np.min(s11.index), np.mean(s11.index), np.max(s11.index)))
     circle, _ = circle_fit(s11)
 
     pm.v['fr'] = (s11).abs().idxmin()
-    # estimate the tilt angle based on the circle centre
-    pm.v['theta'] = -np.angle(1 - circle.z)
+    pm.v['theta'] = np.angle(1 - circle.z) # use the circle tilt to get theta
+    pm.freeze('theta') # this should be a good estimate of the asymmetry
 
+    # when f = fr, |s11| = |(Kc - Ki)/(Kc + Ki)| = |1 - 2 Ki/(Kc + Ki)| ~ 1 - 2*r
+    # ==> Ki ~ r*Kl
+    # ==> Qi ~ Ql/r
+    # ==> Re(Qc) ~ 1/(1/Ql - 1/Qi) = Qi/(1/r - 1)
+    
     Ql = pm.v['fr']/fwhm(s11) # the fwhm estimates a good starting point
-    Qc = Ql*(1 - circle.r)
+    Qi = Ql/circle.r
+    Qc = Qi/(1/circle.r - 1) / np.cos(pm.v['theta'])
     if Qc < 0:
         warnings.warn('attempted to set negative Qc')
-    pm.v.set('Qi', np.log10(circle.r*Ql), clip=True)
+    pm.v.set('Qi', np.log10(Qi), clip=True)
     pm.v.set('Qc', np.log10(np.abs(Qc)), clip=True)
 
-    # Nelder-Mead polish the parameters
-    pm.fit(s11)
+    compare_mag = lambda y1, y2: ((y2.abs() - y1.abs())**2).sum()
+    s11_narrow = s11.loc[pm.v['fr'] - fwhm(s11):pm.v['fr'] + fwhm(s11)]
+    pm.fit(s11_narrow, metric=compare_mag)
+    pm.unfreeze('theta')
 
     return pm
