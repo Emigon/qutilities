@@ -18,7 +18,7 @@ from fitkit.decimate import *
 
 def ideal_reflection(b_Qi = (3, 4.5, 6),
                      b_Qc = (3, 4.5, 6),
-                     b_fr = (1*ureg('GHz'), 5*ureg('GHz'), 11*ureg('GHz'))):
+                     b_fr = (1e9, 5e9, 11e9)):
     """ returns a Parametric1D model for an ideal notch resonator
 
     Params:

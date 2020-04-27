@@ -43,7 +43,7 @@ def rm_line_delay(s21, k = 10, N = 201):
     # unwrap the phase and fit linear model to obtain a starting point for tau
     phi = np.unwrap(np.angle(s21.values))
 
-    p = np.poly1d(np.polyfit(s21.x[:k].to('Hz').magnitude, phi[:k], 1))
+    p = np.poly1d(np.polyfit(s21.x[:k], phi[:k], 1))
     tau_0 = p.c[0]/(2*np.pi) # we expect this to be negative
 
     rough = s21*Signal1D(np.exp(-2j*np.pi*tau_0*s21.x), xraw = s21.x)
@@ -53,7 +53,7 @@ def rm_line_delay(s21, k = 10, N = 201):
 
     def errf(v, self, sig1d, _):
         try:
-            pm_neg.v['tau'] = v[0]*pm_neg.v['tau'].to_base_units().units
+            pm_neg.v['tau'] = v[0]*pm_neg.v['tau']
         except:
             pass # return the same result as the previously set parameter!
         return circle_fit(sig1d*pm_neg(sig1d.x))[-1]
