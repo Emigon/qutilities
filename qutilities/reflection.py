@@ -37,7 +37,7 @@ def ideal_reflection(b_Qi = (3, 4.5, 6),
 
     return Parametric1D(expr, params)
 
-def rm_global_gain_and_phase(s11):
+def rm_global_gain_and_phase(s11, flip_phase=True):
     """ scale and rotate s11 such that s21(f = infty) sits a 1 + 0j
 
     Args:
@@ -52,10 +52,12 @@ def rm_global_gain_and_phase(s11):
 
     z = np.exp(-1j*np.pi)*z_at_f_infty(s11, circle_fit(s11)[0], clockwise=True)
 
-    pm_env.v['G'] = 10*np.log10(np.abs(z))
-    pm_env.v['theta'] = np.angle(z)*ureg('radian')
+    result = np.exp(1j*(np.pi - np.angle(z)))/np.abs(z)*s11
 
-    return s11 / z, pm_env
+    if flip_phase:
+        result = Signal1D(result.real().values - 1j*result.imag().values, xraw=result.x)
+
+    return result
 
 def fit_reflection(s11):
     """ fit the resonance parameters for a notch resonator to the resonance s11
