@@ -47,5 +47,5 @@ def fwhm(s21):
     """ estimate the full-width half-min of the resonance s21 (Signal1D) """
     mag = s21.abs()
     half_max = mag.min() + .5*np.ptp(mag.values)
-    fwhm = np.ptp(mag.samples_below(half_max).x)
+    fwhm = np.ptp(mag[mag <= half_max].index)
     return fwhm
