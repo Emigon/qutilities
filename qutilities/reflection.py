@@ -19,6 +19,7 @@ from fitkit import Parametric1D
 def ideal_reflection(b_Qi = (3, 4.5, 6),
                      b_Qc = (3, 4.5, 6),
                      b_theta = (-np.pi, 0, np.pi),
+                     b_phi = (-np.pi, 0, np.pi),
                      b_fr = (1e9, 5e9, 11e9)):
     """ returns a Parametric1D model for an ideal notch resonator
 
@@ -30,20 +31,23 @@ def ideal_reflection(b_Qi = (3, 4.5, 6),
 
     Args:   Parameter bounds as required by Parametric1D
     """
-    Qi, Qc, theta, Kc, Ki, fr, f = sp.symbols('Qi Qc theta Kc Ki fr f')
+    Qi, Qc, theta, Kc, Ki, phi, fr, f = sp.symbols('Qi Qc theta Kc Ki phi fr f')
 
     s11 = ((Kc - Ki) + 2j*(f - fr))/((Kc + Ki) - 2j*(f - fr))
     expr = s11.subs(Kc, fr/((10**Qc)*sp.exp(1j*theta))).subs(Ki, fr/(10**Qi))
+    expr *= sp.exp(1j*phi)
 
-    params = {'Qi': b_Qi, 'Qc': b_Qc, 'theta': b_theta, 'fr': b_fr}
+    params = {'Qi': b_Qi, 'Qc': b_Qc, 'theta': b_theta, 'phi': b_phi, 'fr': b_fr}
 
     return Parametric1D(expr, params, call_type=pd.Series)
 
-def fit_reflection(s11):
+def fit_reflection(s11, k=50):
     """ fit the resonance parameters for a notch resonator to the resonance s11
 
     Args:
         s11:    The complex resonance represented as a fitkit.Signal1D type
+        k:      The number of samples taken from both ends of the spectrum, to use
+                to apply a global phase offset to the data
 
     Returns:
         model:  The Parametric1D model of the fitted resonance
@@ -53,7 +57,6 @@ def fit_reflection(s11):
 
     pm.v['fr'] = (s11).abs().idxmin()
     pm.v['theta'] = np.angle(1 - circle.z) # use the circle tilt to get theta
-    pm.freeze('theta') # this should be a good estimate of the asymmetry
 
     # when f = fr, |s11| = |(Kc - Ki)/(Kc + Ki)| = |1 - 2 Ki/(Kc + Ki)| ~ 1 - 2*r
     # ==> Ki ~ r*Kl
@@ -68,9 +71,18 @@ def fit_reflection(s11):
     pm.v.set('Qi', np.log10(Qi), clip=True)
     pm.v.set('Qc', np.log10(np.abs(Qc)), clip=True)
 
-    compare_mag = lambda y1, y2: ((y2.abs() - y1.abs())**2).sum()
-    s11_narrow = s11.loc[pm.v['fr'] - fwhm(s11):pm.v['fr'] + fwhm(s11)]
-    pm.fit(s11_narrow, metric=compare_mag)
-    pm.unfreeze('theta')
+    def metric(y1, y2):
+        return ((np.real(y1) - np.real(y2))**2).sum() + \
+               ((np.imag(y1) - np.imag(y2))**2).sum()
+
+    pm.freeze(['Qi', 'Qc', 'fr', 'theta'])
+    pm.fit(pd.concat([s11.iloc[:k], s11.iloc[-k:]]), metric=metric)
+
+    s11_narrow = s11.loc[pm.v['fr'] - 2*fwhm(s11):pm.v['fr'] + 2*fwhm(s11)].iloc[::2]
+
+    pm.freeze('phi')
+    pm.unfreeze(['Qi', 'Qc', 'fr', 'theta'])
+    pm.fit(s11_narrow, metric=metric)
+    pm.unfreeze('phi')
 
     return pm
