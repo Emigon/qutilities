@@ -47,5 +47,5 @@ def fwhm(sparam):
     """ estimate the full-width half-min of the resonance sparam (Signal1D) """
     mag = np.abs(sparam)
     half_max = mag.min() + .5*np.ptp(mag.values)
-    fwhm = np.ptp(mag[mag <= half_max].index.values)
+    fwhm = np.ptp(mag[mag <= half_max].frequency.values)
     return fwhm
