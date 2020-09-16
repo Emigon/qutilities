@@ -43,9 +43,9 @@ def z_at_f_infty(s21, circle, clockwise = False):
     # adjust the point so that it sits on the fitted circle
     return circle.z + circle.r*(z - circle.z)/np.abs(z - circle.z)
 
-def fwhm(s21):
-    """ estimate the full-width half-min of the resonance s21 (Signal1D) """
-    mag = s21.abs()
+def fwhm(sparam):
+    """ estimate the full-width half-min of the resonance sparam (Signal1D) """
+    mag = np.abs(sparam)
     half_max = mag.min() + .5*np.ptp(mag.values)
-    fwhm = np.ptp(mag[mag <= half_max].index)
+    fwhm = np.ptp(mag[mag <= half_max].index.values)
     return fwhm
