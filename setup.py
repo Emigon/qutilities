@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='qutilities',
-      version='0.0.1',
+      version='0.1.0',
       description='Utilities for measuring Q-factors',
       url='https://github.com/Emigon/qutilities',
       author='Daniel Parker',
