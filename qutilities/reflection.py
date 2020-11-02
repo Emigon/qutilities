@@ -34,7 +34,7 @@ def ideal_reflection(b_Qi = (2, 4, 6),
     """
     Qi, Qc, theta, Kc, Ki, phi, fc, f = sp.symbols('Qi Qc theta Kc Ki phi fc f')
 
-    s11 = ((Kc - Ki) + 2j*(f - fc))/((Kc + Ki) - 2j*(f - fc))
+    s11 = ((Kc - Ki) - 2j*(f - fc))/((Kc + Ki) + 2j*(f - fc))
     expr = s11.subs(Kc, fc/((10**Qc)*sp.exp(1j*phi))).subs(Ki, fc/(10**Qi))
     expr *= sp.exp(1j*theta)
 
