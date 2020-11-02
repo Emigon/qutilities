@@ -22,7 +22,7 @@ def global_gain_and_phase(b_G = (-40, 0, 40),
     """
     G, theta = sp.symbols('G theta')
     cartesian = 10**(G/10) * sp.exp(1j * theta)
-    return Parametric1D(cartesian, {'G': b_G, 'theta': b_theta})
+    return Parametric1D(cartesian, {'G': b_G, 'theta': b_theta}, call_type=pd.Series)
 
 def z_at_f_infty(s21, circle, clockwise = False):
     """ locates the point z on the given circle corresponding to s21(f = infinity)
@@ -47,5 +47,5 @@ def fwhm(sparam):
     """ estimate the full-width half-min of the resonance sparam (Signal1D) """
     mag = np.abs(sparam)
     half_max = mag.min() + .5*np.ptp(mag.values)
-    fwhm = np.ptp(mag[mag <= half_max].frequency.values)
+    fwhm = np.ptp(mag[mag <= half_max].index)
     return fwhm

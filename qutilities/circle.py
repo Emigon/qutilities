@@ -14,8 +14,6 @@ from scipy.linalg import eig
 
 import matplotlib.patches as patches
 
-from fitkit import *
-
 class Circle(object):
     def __init__(self, z, r):
         self.z = z
@@ -44,30 +42,30 @@ class Circle(object):
         axes.relim()
         axes.autoscale_view()
 
-def circle_fit(s21_complex, attempts = 5):
+def circle_fit(sparam, attempts=5):
     """ fit a circle to a resonance on the complex plane
 
     Args:
-        s21_complex:    A Signal1D formatted resonance, with phase and magnitude
-                        components represented by complex numbers
-        attempts:       The number of times to attempt to fit the data before
-                        raising an exception. Sometimes the solution is a circle
-                        with a very big radius that intersects the data at a
-                        single point. This is a mathematically valid solution but
-                        not a useful one. A single point is removed at random from
-                        the data until a fit with a radius < the estimated diameter
-                        from the range of real values is achieved. Default value
-                        is 5. To attempt once set attempts to 1. Do not set to 0.
+        sparam:    A pandas Series formatted resonance, with phase and magnitude
+                   components represented by complex numbers
+        attempts:  The number of times to attempt to fit the data before
+                   raising an exception. Sometimes the solution is a circle
+                   with a very big radius that intersects the data at a
+                   single point. This is a mathematically valid solution but
+                   not a useful one. A single point is removed at random from
+                   the data until a fit with a radius < the estimated diameter
+                   from the range of real values is achieved. Default value
+                   is 5. To attempt once set attempts to 1. Do not set to 0.
 
     Returns:
-        circle:         A Circle with fitted radius and centre (represented by
-                        a complex attribute z)
-        error:          The sum of the squares error in the magnitude deviation
-                        from the fitted circle. This is intended for use in
-                        optimisations that process the resonance to make it more
-                        circular
+        circle:    A Circle with fitted radius and centre (represented by
+                   a complex attribute z)
+        error:     The sum of the squares error in the magnitude deviation
+                   from the fitted circle. This is intended for use in
+                   optimisations that process the resonance to make it more
+                   circular
     """
-    x, y = np.real(s21_complex.values), np.imag(s21_complex.values)
+    x, y = np.real(sparam.values), np.imag(sparam.values)
     xp = x - np.mean(x)
     yp = y - np.mean(y)
 
@@ -108,17 +106,17 @@ def circle_fit(s21_complex, attempts = 5):
     yc += np.mean(y) # undo the initial transformations
 
     r = np.sqrt(scale) * np.sqrt(B**2 + C**2 - 4*A*D)/(2*np.abs(A))
-    err = np.sum(np.abs(np.abs(s21_complex.values - (xc + 1j*yc)) - r))
+    err = np.sum(np.abs(np.abs(sparam.values - (xc + 1j*yc)) - r))
 
     # randomly remove a sample if the radius of the fitted circle makes no sense
     # and try to fit the data again
     if r > 100*np.ptp(x):
         if attempts > 0:
-            k = np.random.choice(len(s21_complex))
-            x, y = s21_complex.x, s21_complex.values
+            k = np.random.choice(len(sparam))
+            x, y = sparam.index, sparam.values
             x = np.append(x[:k], x[k+1:])
             y = np.append(y[:k], y[k+1:])
-            return circle_fit(Signal1D(y, xraw = x), attempts = attempts - 1)
+            return circle_fit(pd.Series(y, index=x), attempts=attempts-1)
         warnings.warn("Failed to fit non-big circle to data")
 
     return Circle(xc + 1j*yc, r), err

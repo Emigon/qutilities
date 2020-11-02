@@ -8,12 +8,12 @@ models and tools for fitting hybridised resonances
 import warnings
 
 import numpy as np
-import xarray as xr
+import pandas as pd
 import sympy as sp
 
-from  qutilities import *
+from qutilities import *
 
-from fitkit import *
+from fitkit import Parametric1D
 
 def hybrid_reflection(b_fa = (1e9, 8e9, 40e9),
                       b_fd = (-40e9, 15e9, 40e9),
@@ -44,4 +44,4 @@ def hybrid_reflection(b_fa = (1e9, 8e9, 40e9),
     # convert rates into log units
     expr = expr.subs(Kc, 10**Kc).subs(Ki, 10**Ki).subs(gamma, 10**gamma)
 
-    return Parametric1D(expr, params, call_type=xr.DataArray)
+    return Parametric1D(expr, params, call_type=pd.Series)

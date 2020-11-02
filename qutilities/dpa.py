@@ -59,4 +59,4 @@ def ideal_dpa_reflection(b_Qi = (10, 1000, 1000000),
         'theta':  b_theta,
     }
 
-    return Parametric1D(expr, params, call_type=xr.DataArray)
+    return Parametric1D(expr, params, call_type=pd.Series)

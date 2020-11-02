@@ -16,10 +16,10 @@ from qutilities import *
 from fitkit import *
 from fitkit.decimate import *
 
-def ideal_notch(b_Qi = (3, 4.5, 6),
-                b_Qc = (3, 4.5, 6),
-                b_phi = (-60*ureg('degree'), 0*ureg('degree'), 60*ureg('degree')),
-                b_fr = (1*ureg('GHz'), 5*ureg('GHz'), 11*ureg('GHz'))):
+def ideal_notch(b_Qi=(3, 4.5, 6),
+                b_Qc=(3, 4.5, 6),
+                b_phi=(-np.pi/3, 0, np.pi/3),
+                b_fr=(1e9, 5e9, 11e9)):
     """ returns a Parametric1D model for an ideal notch resonator
 
     Params:
@@ -36,14 +36,14 @@ def ideal_notch(b_Qi = (3, 4.5, 6),
 
     params = {'Qi': b_Qi, 'Qc': b_Qc, 'phi': b_phi, 'fr': b_fr}
 
-    return Parametric1D(expr, params)
+    return Parametric1D(expr, params, call_type=pd.Series)
 
 def rm_global_gain_and_phase(s21):
     """ scale and rotate s21 such that s21(f = infty) sits a 1 + 0j
 
     Args:
-        s21:    Signal1D representation of the resonance data. Assumed to already
-                be circular
+        s21:    pandas Series representation of the resonance data. Assumed to
+                already be circular (line delay removed in preprocessing)
 
     Returns:
         s21:    The repositioned input
@@ -62,7 +62,7 @@ def fit_notch(s21, N = 500):
     """ fit the resonance parameters for a notch resonator to the resonance s21
 
     Args:
-        s21:    the complex resonance represented as a fitkit.Signal1D type
+        s21:    the complex resonance represented as a pandas Series type
         N:      the number of sample to decimate the signal to when fitting the
                 loaded quality factor. see code for details
 
@@ -70,11 +70,11 @@ def fit_notch(s21, N = 500):
         notch:  The Parametric1D model of the fitted resonance
         stds:   The standard deviations of the fitted quality factors Qc and Qi
     """
-    notch = ideal_notch(b_fr = (np.min(s21.x), np.mean(s21.x), np.max(s21.x)))
+    notch = ideal_notch(b_fr=(np.min(s21.index), np.mean(s21.index), np.max(s21.index)))
     circle, eps = circle_fit(s21)
 
     # estimate the tilt angle based on the circle centre
-    notch.v['phi'] = -np.angle(1 - circle.z)*ureg('radian')
+    notch.v['phi'] = -np.angle(1 - circle.z)
 
     # estimate the resonance frequency to be diametrically opposite 1 + 0j
     sfr = -(1 + 0j - circle.z) + circle.z
@@ -83,17 +83,15 @@ def fit_notch(s21, N = 500):
     # construct a simplified model using measured parameters above
     Ql, fr, f = sp.symbols('Ql fr f')
     expr = 1 - 2*circle.r*np.exp(-1j*notch.v['phi'].magnitude) \
-               / (1 + 2j*Ql*(f*ureg('Hz')/notch.v['fr'] - 1))
+               / (1 + 2j*Ql*(f / notch.v['fr'] - 1))
 
     Qrough = notch.v['fr']/fwhm(s21) # the fwhm estimates a good starting point
-    simple_pm = Parametric1D(expr, {'Ql': (.8*Qrough, Qrough, 1.2*Qrough)})
-
-    # convert to dimensionless as units have been cancelled in above expr. sympy
-    # and pint don't play nice!
-    in_hz = Signal1D(s21.values, xraw = s21.x.to('Hz').magnitude)
+    simple_pm = Parametric1D(expr,
+                             {'Ql': (.8*Qrough, Qrough, 1.2*Qrough)},
+                             call_type=pd.Series)
 
     # decimate the data to reduce the influence of off resonance points on the fit
-    simple_pm.fit(decimate_by_derivative(in_hz, N))
+    simple_pm.fit(decimate_by_derivative(s21, N))
 
     # calculate individual quality factors from the fitted loaded quality factor
     Qc = simple_pm.v['Ql']/(2*circle.r)

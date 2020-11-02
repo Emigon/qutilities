@@ -8,7 +8,7 @@ models and tools for fitting the resonance parameters of a reflection-type reson
 import warnings
 
 import numpy as np
-import xarray as xr
+import pandas as pd
 import sympy as sp
 
 from .circle import *
@@ -40,25 +40,24 @@ def ideal_reflection(b_Qi = (2, 4, 6),
 
     params = {'Qi': b_Qi, 'Qc': b_Qc, 'theta': b_theta, 'fc': b_fc, 'phi': b_phi}
 
-    return Parametric1D(expr, params, call_type=xr.DataArray)
+    return Parametric1D(expr, params, call_type=pd.Series)
 
 def fit_reflection(s11, k=50):
     """ fit the resonance parameters for a notch resonator to the resonance s11
 
     Args:
-        s11:    The complex resonance represented as an xarray.DataArray type with
-                frequency axis.
+        s11:    The complex resonance represented as an pd.Series type
         k:      The number of samples taken from both ends of the spectrum, to use
                 to apply a global phase offset to the data
 
     Returns:
         model:  The Parametric1D model of the fitted resonance
     """
-    freq = s11.frequency.values
+    freq = s11.index
     pm = ideal_reflection(b_fc=(np.min(freq), np.mean(freq), np.max(freq)))
     circle, _ = circle_fit(s11)
 
-    pm['fc'] = s11.frequency[np.abs(s11).argmin()].item()
+    pm['fc'] = s11.apply(np.abs).idxmin()
     pm['phi'] = np.angle(1 - circle.z) # use the circle tilt to get phi
 
     # when f = fc, |s11| = |(Kc - Ki)/(Kc + Ki)| = |1 - 2 Ki/(Kc + Ki)| ~ 1 - 2*r
@@ -79,7 +78,7 @@ def fit_reflection(s11, k=50):
                 ((np.imag(y1.values) - np.imag(y2.values))**2).sum())
 
     pm.freeze(['Qi', 'Qc', 'fc', 'phi'])
-    pm.fit(xr.concat([s11[:k], s11[-k:]], 'frequency'), metric=metric)
+    pm.fit(pd.concat([s11[:k], s11[-k:]]), metric=metric)
 
     s11_narrow = s11.loc[pm['fc'] - 2*fwhm(s11):pm['fc'] + 2*fwhm(s11)][::2]
 

@@ -39,16 +39,16 @@ def ideal_transmission(b_Qi = (3, 4.5, 6),
 
     params = {'Qi': b_Qi, 'Q1': b_Q1, 'Q2': b_Q2, 'fr': b_fr}
 
-    return Parametric1D(expr_s11, params),\
-           Parametric1D(expr_s22, params),\
-           Parametric1D(expr_s21, params)
+    return Parametric1D(expr_s11, params, call_type=pd.Series),\
+           Parametric1D(expr_s22, params, call_type=pd.Series),\
+           Parametric1D(expr_s21, params, call_type=pd.Series)
 
 def rm_global_gain_and_phase(s11, s22, s21, flip_phase=True):
     """ scale and rotate all sparameters such that s11(f = infty) sits a -1 + 0j
 
     Args:
-        s21:    Signal1D representation of the resonance data. Assumed to already
-                be circular
+        s21:    pandas Series representation of the resonance data. Assumed to
+                already be circular (line delay removed in preprocessing)
 
     Returns:
         s21:    The repositioned input
@@ -65,7 +65,7 @@ def rm_global_gain_and_phase(s11, s22, s21, flip_phase=True):
 
     if flip_phase:
         for i, r in enumerate(result):
-            result[i] = Signal1D(r.real().values - 1j*r.imag().values, xraw=r.x)
+            result[i] = pd.Series(r.real().values - 1j*r.imag().values, xraw=r.index)
 
     return result[0], result[1], result[2]
 
@@ -73,7 +73,7 @@ def fit_transmission(s11, s22, s21):
     """ fit the resonance parameters for a notch resonator to the resonance s11
 
     Args:
-        s11:    The complex resonance represented as a fitkit.Signal1D type. All
+        s11:    The complex resonance represented as a pandas Series. All
                 scattering parameters are required to fit transmission style
                 resonances.
         s22:    S22 scattering parameter. Same type as s11.
@@ -82,7 +82,7 @@ def fit_transmission(s11, s22, s21):
     Returns:
         model:  The Parametric1D model of the fitted resonance
     """
-    b_fr = (np.min(s21.x), np.mean(s21.x), np.max(s21.x))
+    b_fr = (np.min(s21.index), np.mean(s21.index), np.max(s21.index))
     pm_s11, pm_s22, pm_s21 = ideal_transmission(b_fr=b_fr)
 
     for pm in [pm_s11, pm_s22, pm_s21]:
